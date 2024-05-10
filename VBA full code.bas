@@ -14,10 +14,14 @@ Sub CalculateStockMetrics()
     End If
     On Error GoTo 0
     
+    ' Headers
     analysisSheet.Cells(1, 1) = "Stock"
     analysisSheet.Cells(1, 2) = "Annual Change"
     analysisSheet.Cells(1, 3) = "Change in %"
     analysisSheet.Cells(1, 4) = "Total Traded Volume"
+    analysisSheet.Cells(1, 5) = "Greatest % Increase"
+    analysisSheet.Cells(1, 6) = "Greatest % Decrease"
+    analysisSheet.Cells(1, 7) = "Greatest Total Volume"
     
     Dim totalEntries As Long
     totalEntries = yearSheet.Cells(yearSheet.Rows.Count, 1).End(xlUp).Row
@@ -28,6 +32,17 @@ Sub CalculateStockMetrics()
     Dim totalVolume As Double
     Dim openPrice As Double
     Dim closePrice As Double
+    
+    Dim maxIncrease As Double
+    Dim maxDecrease As Double
+    Dim maxVolume As Double
+    Dim stockMaxInc As String
+    Dim stockMaxDec As String
+    Dim stockMaxVol As String
+    
+    maxIncrease = 0
+    maxDecrease = 0
+    maxVolume = 0
     
     Dim resultsRow As Long
     resultsRow = 2
@@ -49,6 +64,20 @@ Sub CalculateStockMetrics()
                 percentChange = (annualChange / openPrice) * 100
             End If
             
+            ' Update maximums
+            If percentChange > maxIncrease Then
+                maxIncrease = percentChange
+                stockMaxInc = stock
+            End If
+            If percentChange < maxDecrease Then
+                maxDecrease = percentChange
+                stockMaxDec = stock
+            End If
+            If totalVolume > maxVolume Then
+                maxVolume = totalVolume
+                stockMaxVol = stock
+            End If
+            
             analysisSheet.Cells(resultsRow, 1) = stock
             analysisSheet.Cells(resultsRow, 2) = annualChange
             analysisSheet.Cells(resultsRow, 3) = Round(percentChange, 2) & "%"
@@ -65,24 +94,24 @@ Sub CalculateStockMetrics()
         End If
     Next rowIndex
 
-    Dim changeRange As Range
-    Set changeRange = analysisSheet.Range("B2:B" & resultsRow - 1)
-    With changeRange
-        .FormatConditions.Add Type:=xlCellValue, Operator:=xlGreater, Formula1:="0"
-        .FormatConditions(1).Interior.Color = vbGreen
-        .FormatConditions.Add Type:=xlCellValue, Operator:=xlLess, Formula1:="0"
-        .FormatConditions(1).Interior.Color = vbRed
-    End With
+    ' Update the greatest values on the top of the sheet
+    analysisSheet.Cells(2, 5) = stockMaxInc & " (" & Round(maxIncrease, 2) & "%)"
+    analysisSheet.Cells(2, 6) = stockMaxDec & " (" & Round(maxDecrease, 2) & "%)"
+    analysisSheet.Cells(2, 7) = stockMaxVol & " (" & maxVolume & ")"
 
-    Dim percentRange As Range
-    Set percentRange = analysisSheet.Range("C2:C" & resultsRow - 1)
-    With percentRange
-        .FormatConditions.Add Type:=xlCellValue, Operator:=xlGreater, Formula1:="0"
-        .FormatConditions(1).Interior.Color = vbGreen
-        .FormatConditions.Add Type:=xlCellValue, Operator:=xlLess, Formula1:="0"
-        .FormatConditions(1).Interior.Color = vbRed
-    End With
-
-    analysisSheet.Columns("A:D").AutoFit
+    ' Apply conditional formatting
+    Call ApplyConditionalFormatting(analysisSheet.Range("B2:B" & resultsRow - 1))
+    Call ApplyConditionalFormatting(analysisSheet.Range("C2:C" & resultsRow - 1))
+    
+    analysisSheet.Columns("A:G").AutoFit
 End Sub
 
+Sub ApplyConditionalFormatting(rng As Range)
+    With rng
+        .FormatConditions.Delete
+        .FormatConditions.Add Type:=xlCellValue, Operator:=xlGreater, Formula1:="0"
+        .FormatConditions(1).Interior.Color = vbGreen
+        .FormatConditions.Add Type:=xlCellValue, Operator:=xlLess, Formula1:="0"
+        .FormatConditions(2).Interior.Color = vbRed
+    End With
+End Sub
